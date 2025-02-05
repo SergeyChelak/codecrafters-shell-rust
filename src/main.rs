@@ -62,16 +62,52 @@ fn exec<T: AsRef<str>>(program: &str, args: &[T]) -> bool {
     child.wait().is_ok()
 }
 
+enum Enclose {
+    Active(char),
+    None,
+}
+
+impl Enclose {
+    fn is_none(&self) -> bool {
+        matches!(self, Self::None)
+    }
+
+    fn is_enclosing(&self) -> bool {
+        !self.is_none()
+    }
+
+    fn is_enclosed_with(&self, ch: char) -> bool {
+        match self {
+            Self::Active(enc) => ch == *enc,
+            Self::None => false,
+        }
+    }
+}
+
+fn is_enclose_char(ch: char) -> bool {
+    match ch {
+        '\'' | '\"' => true,
+        _ => false,
+    }
+}
+
 fn parse_args(args: &str) -> Vec<String> {
-    let mut is_enclosing = false;
     let mut acc: Vec<char> = Vec::new();
     let mut tokens: Vec<String> = Vec::new();
+
+    let mut enclose = Enclose::None;
     for ch in args.chars().chain(iter::once('\0')) {
-        if ch == '\'' {
-            is_enclosing = !is_enclosing;
-            continue;
+        if is_enclose_char(ch) {
+            if enclose.is_none() {
+                enclose = Enclose::Active(ch);
+                continue;
+            }
+            if enclose.is_enclosed_with(ch) {
+                enclose = Enclose::None;
+                continue;
+            }
         }
-        if ch == ' ' && !is_enclosing || ch == '\0' {
+        if ch == ' ' && !enclose.is_enclosing() || ch == '\0' {
             if !acc.is_empty() {
                 let token = acc.iter().collect::<String>();
                 // TODO: trim?
@@ -90,7 +126,7 @@ mod test {
     use super::*;
 
     #[test]
-    fn parse_args_test_0() {
+    fn parse_args_test_empty() {
         let args = "";
 
         let res = parse_args(args);
@@ -98,7 +134,7 @@ mod test {
     }
 
     #[test]
-    fn parse_args_test_1() {
+    fn parse_args_test_single_quote_1() {
         let args = "'shell hello'";
 
         let res = parse_args(args);
@@ -107,12 +143,42 @@ mod test {
     }
 
     #[test]
-    fn parse_args_test_2() {
+    fn parse_args_test_single_quote_2() {
         let args = "'/tmp/file name' '/tmp/file name with spaces'";
 
         let res = parse_args(args);
         assert!(res.len() == 2);
         assert_eq!(res[0], "/tmp/file name");
         assert_eq!(res[1], "/tmp/file name with spaces");
+    }
+
+    #[test]
+    fn parse_args_test_double_quote_2() {
+        let args = "\"quz  hello\"  \"bar\"";
+
+        let res = parse_args(args);
+        assert!(res.len() == 2);
+        assert_eq!(res[0], "quz  hello");
+        assert_eq!(res[1], "bar")
+    }
+
+    #[test]
+    fn parse_args_test_double_quote_enclose_single_quotes() {
+        let args = "\"/tmp/file name\" \"/tmp/'file name' with spaces\"";
+        let res = parse_args(args);
+        assert!(res.len() == 2);
+        assert_eq!(res[0], "/tmp/file name");
+        assert_eq!(res[1], "/tmp/'file name' with spaces");
+    }
+
+    #[test]
+    fn parse_args_test_mixed_quotes_3() {
+        let args = "\"bar\"  \"shell's\"  \"foo\"";
+
+        let res = parse_args(args);
+        assert!(res.len() == 3);
+        assert_eq!(res[0], "bar");
+        assert_eq!(res[1], "shell's");
+        assert_eq!(res[2], "foo");
     }
 }
