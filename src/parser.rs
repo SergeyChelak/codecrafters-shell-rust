@@ -1,5 +1,11 @@
 use std::iter;
 
+pub fn parse_args(args: &str) -> Vec<String> {
+    let mut parser = Parser::new(args);
+    parser.parse();
+    parser.tokens
+}
+
 enum Enclose {
     Active(char),
     None,
@@ -22,49 +28,101 @@ impl Enclose {
     }
 }
 
-pub fn parse_args(args: &str) -> Vec<String> {
-    let mut acc: Vec<char> = Vec::new();
-    let mut tokens: Vec<String> = Vec::new();
-    let mut preserve_next = false;
-    let mut enclose = Enclose::None;
-    for ch in args.chars().chain(iter::once('\0')) {
-        if preserve_next {
-            acc.push(ch);
-            preserve_next = false;
-            continue;
-        }
-        if is_enclose_char(ch) {
-            if enclose.is_none() {
-                enclose = Enclose::Active(ch);
-                continue;
-            }
-            if enclose.is_enclosed_with(ch) {
-                enclose = Enclose::None;
-                continue;
-            }
-        }
-        if !enclose.is_enclosing() && ch == '\\' {
-            preserve_next = true;
-            continue;
-        }
-        if ch == ' ' && !enclose.is_enclosing() || ch == '\0' {
-            if !acc.is_empty() {
-                let token = acc.iter().collect::<String>();
-                // TODO: trim...
-                tokens.push(token);
-                acc.clear();
-            }
-            continue;
-        }
-        acc.push(ch);
-    }
-    tokens
+struct Parser<'a> {
+    acc: Vec<char>,
+    tokens: Vec<String>,
+    enclose: Enclose,
+    is_escaping: bool,
+    input: &'a str,
 }
 
-fn is_enclose_char(ch: char) -> bool {
-    match ch {
-        '\'' | '\"' => true,
-        _ => false,
+impl<'a> Parser<'a> {
+    pub fn new(input: &'a str) -> Self {
+        Parser {
+            acc: Vec::new(),
+            tokens: Vec::new(),
+            enclose: Enclose::None,
+            is_escaping: false,
+            input,
+        }
+    }
+
+    pub fn parse(&mut self) {
+        for ch in self.input.chars().chain(iter::once('\0')) {
+            if self.try_process_escaping(ch) {
+                continue;
+            }
+            if self.try_update_enclose(ch) {
+                continue;
+            }
+            if self.try_escaping(ch) {
+                continue;
+            }
+            if self.try_flush_token(ch) {
+                continue;
+            }
+            self.acc.push(ch);
+        }
+    }
+
+    fn try_process_escaping(&mut self, ch: char) -> bool {
+        if !self.is_escaping {
+            return false;
+        }
+
+        if self.enclose.is_enclosed_with('\"') && !matches!(ch, '$' | '\\' | '\"' | '\n') {
+            return false;
+        }
+
+        self.acc.push(ch);
+        self.is_escaping = false;
+        true
+    }
+
+    fn try_escaping(&mut self, ch: char) -> bool {
+        if self.is_escaping || ch != '\\' {
+            return false;
+        }
+
+        // if !self.enclose.is_enclosing() && ch == '\\' {
+        //     self.is_escaping = true;
+        //     return true;
+        // }
+        self.is_escaping = true;
+        true
+    }
+
+    fn try_update_enclose(&mut self, ch: char) -> bool {
+        if !matches!(ch, '\'' | '\"') {
+            return false;
+        }
+        if self.enclose.is_none() {
+            self.enclose = Enclose::Active(ch);
+            return true;
+        }
+        if self.enclose.is_enclosed_with(ch) {
+            self.enclose = Enclose::None;
+            return true;
+        }
+        false
+    }
+
+    fn try_flush_token(&mut self, ch: char) -> bool {
+        if ch == ' ' && !self.enclose.is_enclosing() || ch == '\0' {
+            self.flush_token();
+            return true;
+        }
+        false
+    }
+
+    fn flush_token(&mut self) {
+        if self.acc.is_empty() {
+            return;
+        }
+        let token = self.acc.iter().collect::<String>();
+        // TODO: trim...
+        self.tokens.push(token);
+        self.acc.clear();
     }
 }
 
