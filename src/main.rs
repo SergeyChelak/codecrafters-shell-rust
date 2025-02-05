@@ -24,7 +24,7 @@ const CMD_TYPE: &str = "type";
 const CMD_PWD: &str = "pwd";
 
 fn make_builtin_list() -> Vec<&'static str> {
-    vec![CMD_ECHO, CMD_EXIT, CMD_TYPE]
+    vec![CMD_ECHO, CMD_EXIT, CMD_TYPE, CMD_PWD]
 }
 
 fn make_command_registry() -> CommandRegistry {
