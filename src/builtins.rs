@@ -1,3 +1,5 @@
+use std::env;
+
 use crate::os::{change_working_directory, find_file, get_search_path, get_working_directory};
 
 const CMD_CD: &str = "cd";
@@ -41,7 +43,16 @@ pub fn dispatch_builtin(command: Builtin, args: &str) {
 }
 
 fn cd(arg: &str) {
-    if change_working_directory(arg).is_err() {
+    let path = if arg.starts_with("~") {
+        let Ok(home) = env::var("HOME") else {
+            return;
+        };
+        format!("{}{}", home, &arg[1..])
+    } else {
+        arg.to_string()
+    };
+
+    if change_working_directory(&path).is_err() {
         println!("cd: {}: No such file or directory", arg);
     }
 }
