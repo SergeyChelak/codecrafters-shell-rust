@@ -98,14 +98,13 @@ fn try_exec(program: &str, args: &str) -> bool {
     let Ok(path_list) = get_search_path() else {
         return false;
     };
-    for path in path_list
+    if path_list
         .iter()
         .map(|s| std::path::Path::new(s))
         .map(|p| p.join(program))
+        .any(|p| p.exists())
     {
-        if path.exists() {
-            return exec(path.as_os_str().to_str().unwrap_or_default(), args);
-        }
+        return exec(program, args);
     }
     false
 }
