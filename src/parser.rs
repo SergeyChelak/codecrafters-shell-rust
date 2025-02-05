@@ -38,7 +38,7 @@ pub fn parse_args(args: &str) -> Vec<String> {
                 continue;
             }
         }
-        if ch == '\\' {
+        if enclose.is_enclosing() && ch == '\\' {
             continue;
         }
         if ch == ' ' && !enclose.is_enclosing() || ch == '\0' {
