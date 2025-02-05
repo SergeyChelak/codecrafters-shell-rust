@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-#[allow(unused_imports)]
 use std::io::{self, Write};
 
 fn main() {
@@ -22,6 +21,7 @@ type CommandRegistry = HashMap<String, &'static Command>;
 const CMD_ECHO: &str = "echo";
 const CMD_EXIT: &str = "exit";
 const CMD_TYPE: &str = "type";
+const CMD_PWD: &str = "pwd";
 
 fn make_builtin_list() -> Vec<&'static str> {
     vec![CMD_ECHO, CMD_EXIT, CMD_TYPE]
@@ -32,6 +32,7 @@ fn make_command_registry() -> CommandRegistry {
         (CMD_ECHO, &echo),
         (CMD_EXIT, &exit),
         (CMD_TYPE, &type_builtin),
+        (CMD_PWD, &pwd),
     ];
     let mut registry = HashMap::new();
     for (name, func) in commands {
@@ -92,6 +93,13 @@ fn type_builtin(args: &str) {
     }
 
     println!("{}: not found", args);
+}
+
+fn pwd(_args: &str) {
+    let Ok(path) = std::env::current_dir() else {
+        return;
+    };
+    println!("{}", path.display());
 }
 
 fn try_exec(program: &str, args: &str) -> bool {
