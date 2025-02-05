@@ -76,7 +76,7 @@ impl<'a> Parser<'a> {
     }
 
     fn try_escaping(&mut self, ch: char, next: char) -> bool {
-        if self.is_escaping || ch != '\\' {
+        if self.enclose.is_enclosing() || self.is_escaping || ch != '\\' {
             return false;
         }
 
@@ -181,5 +181,14 @@ mod test {
         assert_eq!(res[0], "bar");
         assert_eq!(res[1], "shell's");
         assert_eq!(res[2], "foo");
+    }
+
+    #[test]
+    fn parse_args_test_enclosed_backslash() {
+        let args = "'/tmp/baz/\"f\\91\"'";
+
+        let res = parse_args(args);
+        assert!(res.len() == 1);
+        assert_eq!(res[0], "/tmp/baz/\"f\\91\"");
     }
 }
