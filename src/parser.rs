@@ -48,14 +48,15 @@ impl<'a> Parser<'a> {
     }
 
     pub fn parse(&mut self) {
-        for ch in self.input.chars().chain(iter::once('\0')) {
+        let next = self.input.chars().chain(['\0', '\0'].into_iter()).skip(1);
+        for (ch, next) in self.input.chars().chain(iter::once('\0')).zip(next) {
             if self.try_process_escaping(ch) {
                 continue;
             }
             if self.try_update_enclose(ch) {
                 continue;
             }
-            if self.try_escaping(ch) {
+            if self.try_escaping(ch, next) {
                 continue;
             }
             if self.try_flush_token(ch) {
@@ -69,25 +70,20 @@ impl<'a> Parser<'a> {
         if !self.is_escaping {
             return false;
         }
-
-        if self.enclose.is_enclosed_with('\"') && !matches!(ch, '$' | '\\' | '\"' | '\n') {
-            return false;
-        }
-
         self.acc.push(ch);
         self.is_escaping = false;
         true
     }
 
-    fn try_escaping(&mut self, ch: char) -> bool {
+    fn try_escaping(&mut self, ch: char, next: char) -> bool {
         if self.is_escaping || ch != '\\' {
             return false;
         }
 
-        // if !self.enclose.is_enclosing() && ch == '\\' {
-        //     self.is_escaping = true;
-        //     return true;
-        // }
+        if self.enclose.is_enclosed_with('\"') && !matches!(next, '$' | '\\' | '\"' | '\n') {
+            return false;
+        }
+
         self.is_escaping = true;
         true
     }
