@@ -55,7 +55,7 @@ fn dispatch(input: &str, registry: &CommandRegistry) {
 }
 
 fn invalid_input(input: &str) {
-    println!("{}: command not found", input);
+    println!("{}: command not found", input.trim());
 }
 
 fn echo(args: &str) {
