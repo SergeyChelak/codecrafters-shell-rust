@@ -25,7 +25,7 @@ impl Enclose {
 pub fn parse_args(args: &str) -> Vec<String> {
     let mut acc: Vec<char> = Vec::new();
     let mut tokens: Vec<String> = Vec::new();
-
+    let mut preserve_next = false;
     let mut enclose = Enclose::None;
     for ch in args.chars().chain(iter::once('\0')) {
         if is_enclose_char(ch) {
@@ -38,10 +38,11 @@ pub fn parse_args(args: &str) -> Vec<String> {
                 continue;
             }
         }
-        if enclose.is_enclosing() && ch == '\\' {
+        if ch == '\\' {
+            preserve_next = true;
             continue;
         }
-        if ch == ' ' && !enclose.is_enclosing() || ch == '\0' {
+        if ch == ' ' && !enclose.is_enclosing() && !preserve_next || ch == '\0' {
             if !acc.is_empty() {
                 let token = acc.iter().collect::<String>();
                 // TODO: trim...
@@ -51,6 +52,7 @@ pub fn parse_args(args: &str) -> Vec<String> {
             continue;
         }
         acc.push(ch);
+        preserve_next = false;
     }
     tokens
 }
