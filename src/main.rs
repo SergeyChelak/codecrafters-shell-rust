@@ -6,7 +6,7 @@ use std::io::{self, Write};
 
 use builtins::{dispatch_builtin, Builtin};
 use os::{find_file, get_search_path};
-use parser::parse_args;
+use parser::parse_input;
 
 fn main() {
     loop {
@@ -23,11 +23,13 @@ fn main() {
 
 fn dispatch(input: &str) {
     let input = input.trim();
-    let (command, args) = input.split_once(' ').unwrap_or((input, ""));
+    let tokens = parse_input(input);
+    let Some(command) = tokens.first() else {
+        return;
+    };
+    let args = &tokens[1..];
 
-    let args = parse_args(args);
-
-    if let Ok(builtin) = Builtin::try_from(command) {
+    if let Ok(builtin) = Builtin::try_from(command.as_str()) {
         dispatch_builtin(builtin, &args);
         return;
     };
