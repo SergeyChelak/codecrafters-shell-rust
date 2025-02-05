@@ -44,7 +44,7 @@ pub fn parse_args(args: &str) -> Vec<String> {
         if ch == ' ' && !enclose.is_enclosing() || ch == '\0' {
             if !acc.is_empty() {
                 let token = acc.iter().collect::<String>();
-                // TODO: trim?
+                // TODO: trim...
                 tokens.push(token);
                 acc.clear();
             }
