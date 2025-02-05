@@ -38,6 +38,9 @@ pub fn parse_args(args: &str) -> Vec<String> {
                 continue;
             }
         }
+        if ch == '\\' {
+            continue;
+        }
         if ch == ' ' && !enclose.is_enclosing() || ch == '\0' {
             if !acc.is_empty() {
                 let token = acc.iter().collect::<String>();
