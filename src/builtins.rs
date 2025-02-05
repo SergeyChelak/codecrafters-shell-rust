@@ -41,7 +41,9 @@ pub fn dispatch_builtin(command: Builtin, args: &str) {
 }
 
 fn cd(arg: &str) {
-    _ = change_working_directory(arg);
+    if change_working_directory(arg).is_err() {
+        println!("cd: {}: No such file or directory", arg);
+    }
 }
 
 fn echo(args: &str) {
