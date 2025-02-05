@@ -28,6 +28,11 @@ pub fn parse_args(args: &str) -> Vec<String> {
     let mut preserve_next = false;
     let mut enclose = Enclose::None;
     for ch in args.chars().chain(iter::once('\0')) {
+        if preserve_next {
+            acc.push(ch);
+            preserve_next = false;
+            continue;
+        }
         if is_enclose_char(ch) {
             if enclose.is_none() {
                 enclose = Enclose::Active(ch);
@@ -42,7 +47,7 @@ pub fn parse_args(args: &str) -> Vec<String> {
             preserve_next = true;
             continue;
         }
-        if ch == ' ' && !enclose.is_enclosing() && !preserve_next || ch == '\0' {
+        if ch == ' ' && !enclose.is_enclosing() || ch == '\0' {
             if !acc.is_empty() {
                 let token = acc.iter().collect::<String>();
                 // TODO: trim...
@@ -52,7 +57,6 @@ pub fn parse_args(args: &str) -> Vec<String> {
             continue;
         }
         acc.push(ch);
-        preserve_next = false;
     }
     tokens
 }
