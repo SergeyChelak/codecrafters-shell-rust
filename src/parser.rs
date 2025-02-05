@@ -76,7 +76,7 @@ impl<'a> Parser<'a> {
     }
 
     fn try_escaping(&mut self, ch: char, next: char) -> bool {
-        if self.enclose.is_enclosing() || self.is_escaping || ch != '\\' {
+        if self.enclose.is_enclosed_with('\'') || self.is_escaping || ch != '\\' {
             return false;
         }
 
