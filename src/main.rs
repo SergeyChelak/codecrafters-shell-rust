@@ -68,9 +68,32 @@ fn exit(_args: &str) {
 
 fn type_builtin(args: &str) {
     let builtins = make_builtin_list();
-    if !builtins.contains(&args) {
-        println!("{}: not found", args);
+    if builtins.contains(&args) {
+        println!("{} is a shell builtin", args);
         return;
     }
-    println!("{} is a shell builtin", args);
+    if let Ok(path_list) = get_search_path() {
+        for path in path_list
+            .iter()
+            .map(|s| std::path::Path::new(s))
+            .map(|p| p.join(args))
+        {
+            if !path.exists() {
+                continue;
+            }
+            println!(
+                "{} is {}",
+                args,
+                path.as_os_str().to_str().unwrap_or_default()
+            );
+            return;
+        }
+    }
+
+    println!("{}: not found", args);
+}
+
+fn get_search_path() -> Result<Vec<String>, std::env::VarError> {
+    let var = std::env::var("PATH")?;
+    Ok(var.split(":").map(|x| x.to_string()).collect::<Vec<_>>())
 }
