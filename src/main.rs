@@ -1,8 +1,10 @@
-use std::collections::HashMap;
+mod builtins;
+
 use std::io::{self, Write};
 
+use builtins::Builtin;
+
 fn main() {
-    let registry = make_command_registry();
     loop {
         print!("$ ");
         io::stdout().flush().unwrap();
@@ -11,41 +13,16 @@ fn main() {
         let stdin = io::stdin();
         let mut input = String::new();
         stdin.read_line(&mut input).unwrap();
-        dispatch(&input, &registry);
+        dispatch(&input);
     }
 }
 
-type Command = dyn Fn(&str);
-type CommandRegistry = HashMap<String, &'static Command>;
-
-const CMD_ECHO: &str = "echo";
-const CMD_EXIT: &str = "exit";
-const CMD_TYPE: &str = "type";
-const CMD_PWD: &str = "pwd";
-
-fn make_builtin_list() -> Vec<&'static str> {
-    vec![CMD_ECHO, CMD_EXIT, CMD_TYPE, CMD_PWD]
-}
-
-fn make_command_registry() -> CommandRegistry {
-    let commands: Vec<(&'static str, &'static Command)> = vec![
-        (CMD_ECHO, &echo),
-        (CMD_EXIT, &exit),
-        (CMD_TYPE, &type_builtin),
-        (CMD_PWD, &pwd),
-    ];
-    let mut registry = HashMap::new();
-    for (name, func) in commands {
-        registry.insert(name.to_string(), func);
-    }
-    registry
-}
-
-fn dispatch(input: &str, registry: &CommandRegistry) {
+fn dispatch(input: &str) {
     let input = input.trim();
     let (command, args) = input.split_once(' ').unwrap_or((input, ""));
-    if let Some(func) = registry.get(command) {
-        func(args);
+
+    if let Ok(builtin) = Builtin::try_from(command) {
+        dispatch_builtin(builtin, args);
         return;
     };
 
@@ -54,6 +31,15 @@ fn dispatch(input: &str, registry: &CommandRegistry) {
     }
 
     invalid_input(input);
+}
+
+fn dispatch_builtin(command: Builtin, args: &str) {
+    match command {
+        Builtin::Echo => echo(args),
+        Builtin::Exit => exit(args),
+        Builtin::Type => type_builtin(args),
+        Builtin::Pwd => pwd(),
+    }
 }
 
 fn invalid_input(input: &str) {
@@ -69,11 +55,11 @@ fn exit(_args: &str) {
 }
 
 fn type_builtin(args: &str) {
-    let builtins = make_builtin_list();
-    if builtins.contains(&args) {
+    if Builtin::try_from(args).is_ok() {
         println!("{} is a shell builtin", args);
         return;
     }
+
     if let Ok(path_list) = get_search_path() {
         for path in path_list
             .iter()
@@ -95,7 +81,7 @@ fn type_builtin(args: &str) {
     println!("{}: not found", args);
 }
 
-fn pwd(_args: &str) {
+fn pwd() {
     let Ok(path) = std::env::current_dir() else {
         return;
     };
