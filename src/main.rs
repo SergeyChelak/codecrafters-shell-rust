@@ -26,12 +26,14 @@ fn dispatch(input: &str) {
     let input = input.trim();
     let (command, args) = input.split_once(' ').unwrap_or((input, ""));
 
+    let args = parse_args(args);
+
     if let Ok(builtin) = Builtin::try_from(command) {
-        dispatch_builtin(builtin, args);
+        dispatch_builtin(builtin, &args);
         return;
     };
 
-    if exec(command, args) {
+    if exec(command, &args) {
         return;
     }
 
@@ -42,7 +44,7 @@ fn invalid_input(input: &str) {
     println!("{}: command not found", input);
 }
 
-fn exec(program: &str, args: &str) -> bool {
+fn exec<T: AsRef<str>>(program: &str, args: &[T]) -> bool {
     let Ok(path_list) = get_search_path() else {
         return false;
     };
@@ -51,8 +53,8 @@ fn exec(program: &str, args: &str) -> bool {
     }
     let mut process = std::process::Command::new(program);
     if !args.is_empty() {
-        let args = parse_args(args);
-        process.args(&args);
+        let args = args.iter().map(|s| s.as_ref()).collect::<Vec<_>>();
+        process.args(args);
     }
     let Ok(mut child) = process.spawn() else {
         return false;
@@ -70,10 +72,12 @@ fn parse_args(args: &str) -> Vec<String> {
             continue;
         }
         if ch == ' ' && !is_enclosing || ch == '\0' {
-            let token = acc.iter().collect::<String>();
-            // TODO: trim?
-            tokens.push(token);
-            acc.clear();
+            if !acc.is_empty() {
+                let token = acc.iter().collect::<String>();
+                // TODO: trim?
+                tokens.push(token);
+                acc.clear();
+            }
             continue;
         }
         acc.push(ch);
@@ -84,6 +88,14 @@ fn parse_args(args: &str) -> Vec<String> {
 #[cfg(test)]
 mod test {
     use super::*;
+
+    #[test]
+    fn parse_args_test_0() {
+        let args = "";
+
+        let res = parse_args(args);
+        assert!(res.is_empty());
+    }
 
     #[test]
     fn parse_args_test_1() {

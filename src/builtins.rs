@@ -32,7 +32,7 @@ impl TryFrom<&str> for Builtin {
     }
 }
 
-pub fn dispatch_builtin(command: Builtin, args: &str) {
+pub fn dispatch_builtin<T: AsRef<str>>(command: Builtin, args: &[T]) {
     match command {
         Builtin::Cd => cd(args),
         Builtin::Echo => echo(args),
@@ -42,7 +42,11 @@ pub fn dispatch_builtin(command: Builtin, args: &str) {
     }
 }
 
-fn cd(arg: &str) {
+fn cd<T: AsRef<str>>(arg: &[T]) {
+    let Some(arg) = arg.first().map(|x| x.as_ref()) else {
+        return;
+    };
+
     let path = if arg.starts_with("~") {
         let Ok(home) = env::var("HOME") else {
             return;
@@ -57,15 +61,24 @@ fn cd(arg: &str) {
     }
 }
 
-fn echo(args: &str) {
-    println!("{}", args);
+fn echo<T: AsRef<str>>(args: &[T]) {
+    let output = args
+        .iter()
+        .map(|x| x.as_ref())
+        .collect::<Vec<_>>()
+        .join(" ");
+    println!("{}", output);
 }
 
-fn exit(_args: &str) {
+fn exit<T: AsRef<str>>(_args: &[T]) {
     std::process::exit(0);
 }
 
-fn type_builtin(args: &str) {
+fn type_builtin<T: AsRef<str>>(args: &[T]) {
+    let Some(args) = args.first().map(|x| x.as_ref()) else {
+        return;
+    };
+
     if Builtin::try_from(args).is_ok() {
         println!("{} is a shell builtin", args);
         return;
