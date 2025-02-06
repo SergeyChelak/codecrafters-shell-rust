@@ -10,12 +10,12 @@ use command::ShellCommand;
 use os::{find_file, get_search_path};
 
 fn main() {
+    let stdin = io::stdin();
     loop {
         print!("$ ");
         io::stdout().flush().unwrap();
 
         // Wait for user input
-        let stdin = io::stdin();
         let mut input = String::new();
         stdin.read_line(&mut input).unwrap();
         process_input(&input);
