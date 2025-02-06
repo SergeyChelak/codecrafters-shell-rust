@@ -51,6 +51,13 @@ impl StandardIO {
 
     pub fn try_stdout_write(&self) -> io::Result<Box<dyn Write>> {
         match self {
+            StandardIO::Default => Ok(Box::new(io::stdout())),
+            StandardIO::File { path, append } => make_write(path, *append),
+        }
+    }
+
+    pub fn try_stderr_write(&self) -> io::Result<Box<dyn Write>> {
+        match self {
             StandardIO::Default => Ok(Box::new(io::stderr())),
             StandardIO::File { path, append } => make_write(path, *append),
         }

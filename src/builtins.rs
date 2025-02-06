@@ -1,4 +1,4 @@
-use std::env;
+use std::{env, io::Write};
 
 use crate::{
     command::ShellCommand,
@@ -36,17 +36,26 @@ impl TryFrom<&str> for Builtin {
 }
 
 pub fn exec_builtin(builtin: Builtin, command: &ShellCommand) {
+    let Ok(mut out) = command.io_out().try_stdout_write() else {
+        return;
+    };
+    let Ok(mut _err) = command.io_err().try_stderr_write() else {
+        return;
+    };
+
+    let args = command.args();
+
     match builtin {
-        Builtin::Cd => cmd_cd(command),
-        Builtin::Echo => cmd_echo(command),
-        Builtin::Exit => cmd_exit(command),
-        Builtin::Type => cmd_type(command),
-        Builtin::Pwd => cmd_pwd(command),
+        Builtin::Cd => cmd_cd(args),
+        Builtin::Echo => cmd_echo(args, &mut out),
+        Builtin::Exit => cmd_exit(),
+        Builtin::Type => cmd_type(args, &mut out),
+        Builtin::Pwd => cmd_pwd(&mut out),
     }
 }
 
-fn cmd_cd(command: &ShellCommand) {
-    let Some(arg) = command.args().first() else {
+fn cmd_cd(args: &[String]) {
+    let Some(arg) = args.first() else {
         return;
     };
 
@@ -64,24 +73,17 @@ fn cmd_cd(command: &ShellCommand) {
     }
 }
 
-fn cmd_echo(command: &ShellCommand) {
-    let output = command.args().join(" ");
-    let Ok(mut out) = command.io_out().try_stdout_write() else {
-        return;
-    };
+fn cmd_echo(args: &[String], out: &mut impl Write) {
+    let output = args.join(" ");
     _ = writeln!(out, "{}", output);
 }
 
-fn cmd_exit(_command: &ShellCommand) {
+fn cmd_exit() {
     std::process::exit(0);
 }
 
-fn cmd_type(command: &ShellCommand) {
-    let Some(args) = command.args().first() else {
-        return;
-    };
-
-    let Ok(mut out) = command.io_out().try_stdout_write() else {
+fn cmd_type(args: &[String], out: &mut impl Write) {
+    let Some(args) = args.first() else {
         return;
     };
 
@@ -105,11 +107,8 @@ fn cmd_type(command: &ShellCommand) {
     _ = writeln!(out, "{}: not found", args);
 }
 
-fn cmd_pwd(command: &ShellCommand) {
+fn cmd_pwd(out: &mut impl Write) {
     let Ok(path) = get_working_directory() else {
-        return;
-    };
-    let Ok(mut out) = command.io_out().try_stdout_write() else {
         return;
     };
     _ = writeln!(out, "{}", path.display());
