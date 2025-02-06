@@ -1,12 +1,17 @@
 mod builtins;
+mod command;
 mod os;
 mod parser;
 
-use std::io::{self, Write};
+use std::{
+    fs::OpenOptions,
+    io::{self, Write},
+    process::Stdio,
+};
 
-use builtins::{dispatch_builtin, Builtin};
+use builtins::{exec_builtin, Builtin};
+use command::{ShellCommand, StandardIO};
 use os::{find_file, get_search_path};
-use parser::parse_input;
 
 fn main() {
     loop {
@@ -17,24 +22,23 @@ fn main() {
         let stdin = io::stdin();
         let mut input = String::new();
         stdin.read_line(&mut input).unwrap();
-        dispatch(&input);
+        process_input(&input);
     }
 }
 
-fn dispatch(input: &str) {
-    let input = input.trim();
-    let tokens = parse_input(input);
-    let Some(command) = tokens.first() else {
-        return;
-    };
-    let args = &tokens[1..];
-
-    if let Ok(builtin) = Builtin::try_from(command.as_str()) {
-        dispatch_builtin(builtin, &args);
+fn process_input(input: &str) {
+    let Some(command) = ShellCommand::with_input(input) else {
+        // TODO: handle invalid commands
         return;
     };
 
-    if exec(command, &args) {
+    if let Ok(builtin) = Builtin::try_from(command.name()) {
+        // TODO: fix it
+        exec_builtin(builtin, &command);
+        return;
+    };
+
+    if exec(&command) {
         return;
     }
 
@@ -45,20 +49,52 @@ fn invalid_input(input: &str) {
     println!("{}: command not found", input);
 }
 
-fn exec<T: AsRef<str>>(program: &str, args: &[T]) -> bool {
+fn exec(cmd: &ShellCommand) -> bool {
     let Ok(path_list) = get_search_path() else {
         return false;
     };
-    if find_file(program, &path_list).is_empty() {
+    if find_file(cmd.name(), &path_list).is_empty() {
         return false;
     }
-    let mut process = std::process::Command::new(program);
+    let mut command = std::process::Command::new(cmd.name());
+    let args = cmd.args();
     if !args.is_empty() {
-        let args = args.iter().map(|s| s.as_ref()).collect::<Vec<_>>();
-        process.args(args);
+        command.args(args);
     }
-    let Ok(mut child) = process.spawn() else {
+
+    if let Ok(stdout) = stdout_from(cmd.io_out()) {
+        command.stdout(stdout);
+    }
+
+    if let Ok(stderr) = stderr_from(cmd.io_err()) {
+        command.stderr(stderr);
+    }
+
+    let Ok(mut child) = command.spawn() else {
         return false;
     };
     child.wait().is_ok()
+}
+
+fn stdout_from(stdio: &StandardIO) -> io::Result<Stdio> {
+    match stdio {
+        StandardIO::Default => Ok(io::stdout().into()),
+        StandardIO::File { path, append } => make_stdio(&path, *append),
+    }
+}
+
+fn stderr_from(stdio: &StandardIO) -> io::Result<Stdio> {
+    match stdio {
+        StandardIO::Default => Ok(io::stderr().into()),
+        StandardIO::File { path, append } => make_stdio(&path, *append),
+    }
+}
+
+fn make_stdio(path: &str, append: bool) -> io::Result<Stdio> {
+    let file = OpenOptions::new()
+        .append(append)
+        .write(true)
+        .create(true)
+        .open(path)?;
+    Ok(Stdio::from(file))
 }

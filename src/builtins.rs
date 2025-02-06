@@ -1,6 +1,9 @@
 use std::env;
 
-use crate::os::{change_working_directory, find_file, get_search_path, get_working_directory};
+use crate::{
+    command::ShellCommand,
+    os::{change_working_directory, find_file, get_search_path, get_working_directory},
+};
 
 const CMD_CD: &str = "cd";
 const CMD_ECHO: &str = "echo";
@@ -32,18 +35,18 @@ impl TryFrom<&str> for Builtin {
     }
 }
 
-pub fn dispatch_builtin<T: AsRef<str>>(command: Builtin, args: &[T]) {
-    match command {
-        Builtin::Cd => cd(args),
-        Builtin::Echo => echo(args),
-        Builtin::Exit => exit(args),
-        Builtin::Type => type_builtin(args),
-        Builtin::Pwd => pwd(),
+pub fn exec_builtin(builtin: Builtin, command: &ShellCommand) {
+    match builtin {
+        Builtin::Cd => cmd_cd(command),
+        Builtin::Echo => cmd_echo(command),
+        Builtin::Exit => cmd_exit(command),
+        Builtin::Type => cmd_type(command),
+        Builtin::Pwd => cmd_pwd(command),
     }
 }
 
-fn cd<T: AsRef<str>>(arg: &[T]) {
-    let Some(arg) = arg.first().map(|x| x.as_ref()) else {
+fn cmd_cd(command: &ShellCommand) {
+    let Some(arg) = command.args().first() else {
         return;
     };
 
@@ -61,25 +64,21 @@ fn cd<T: AsRef<str>>(arg: &[T]) {
     }
 }
 
-fn echo<T: AsRef<str>>(args: &[T]) {
-    let output = args
-        .iter()
-        .map(|x| x.as_ref())
-        .collect::<Vec<_>>()
-        .join(" ");
+fn cmd_echo(command: &ShellCommand) {
+    let output = command.args().join(" ");
     println!("{}", output);
 }
 
-fn exit<T: AsRef<str>>(_args: &[T]) {
+fn cmd_exit(_command: &ShellCommand) {
     std::process::exit(0);
 }
 
-fn type_builtin<T: AsRef<str>>(args: &[T]) {
-    let Some(args) = args.first().map(|x| x.as_ref()) else {
+fn cmd_type(command: &ShellCommand) {
+    let Some(args) = command.args().first() else {
         return;
     };
 
-    if Builtin::try_from(args).is_ok() {
+    if Builtin::try_from(args.as_ref()).is_ok() {
         println!("{} is a shell builtin", args);
         return;
     }
@@ -98,7 +97,7 @@ fn type_builtin<T: AsRef<str>>(args: &[T]) {
     println!("{}: not found", args);
 }
 
-fn pwd() {
+fn cmd_pwd(command: &ShellCommand) {
     let Ok(path) = get_working_directory() else {
         return;
     };
