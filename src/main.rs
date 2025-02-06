@@ -3,14 +3,10 @@ mod command;
 mod os;
 mod parser;
 
-use std::{
-    fs::OpenOptions,
-    io::{self, Write},
-    process::Stdio,
-};
+use std::io::{self, Write};
 
 use builtins::{exec_builtin, Builtin};
-use command::{ShellCommand, StandardIO};
+use command::ShellCommand;
 use os::{find_file, get_search_path};
 
 fn main() {
@@ -33,7 +29,6 @@ fn process_input(input: &str) {
     };
 
     if let Ok(builtin) = Builtin::try_from(command.name()) {
-        // TODO: fix it
         exec_builtin(builtin, &command);
         return;
     };
@@ -62,11 +57,11 @@ fn exec(cmd: &ShellCommand) -> bool {
         command.args(args);
     }
 
-    if let Ok(stdout) = stdout_from(cmd.io_out()) {
+    if let Ok(stdout) = cmd.io_out().try_stdout() {
         command.stdout(stdout);
     }
 
-    if let Ok(stderr) = stderr_from(cmd.io_err()) {
+    if let Ok(stderr) = cmd.io_err().try_stderr() {
         command.stderr(stderr);
     }
 
@@ -74,27 +69,4 @@ fn exec(cmd: &ShellCommand) -> bool {
         return false;
     };
     child.wait().is_ok()
-}
-
-fn stdout_from(stdio: &StandardIO) -> io::Result<Stdio> {
-    match stdio {
-        StandardIO::Default => Ok(io::stdout().into()),
-        StandardIO::File { path, append } => make_stdio(&path, *append),
-    }
-}
-
-fn stderr_from(stdio: &StandardIO) -> io::Result<Stdio> {
-    match stdio {
-        StandardIO::Default => Ok(io::stderr().into()),
-        StandardIO::File { path, append } => make_stdio(&path, *append),
-    }
-}
-
-fn make_stdio(path: &str, append: bool) -> io::Result<Stdio> {
-    let file = OpenOptions::new()
-        .append(append)
-        .write(true)
-        .create(true)
-        .open(path)?;
-    Ok(Stdio::from(file))
 }

@@ -66,7 +66,10 @@ fn cmd_cd(command: &ShellCommand) {
 
 fn cmd_echo(command: &ShellCommand) {
     let output = command.args().join(" ");
-    println!("{}", output);
+    let Ok(mut out) = command.io_out().try_stdout_write() else {
+        return;
+    };
+    _ = writeln!(out, "{}", output);
 }
 
 fn cmd_exit(_command: &ShellCommand) {
@@ -78,14 +81,19 @@ fn cmd_type(command: &ShellCommand) {
         return;
     };
 
+    let Ok(mut out) = command.io_out().try_stdout_write() else {
+        return;
+    };
+
     if Builtin::try_from(args.as_ref()).is_ok() {
-        println!("{} is a shell builtin", args);
+        _ = writeln!(out, "{} is a shell builtin", args);
         return;
     }
 
     if let Ok(path_list) = get_search_path() {
         if let Some(path) = find_file(args, &path_list).first() {
-            println!(
+            _ = writeln!(
+                out,
                 "{} is {}",
                 args,
                 path.as_os_str().to_str().unwrap_or_default()
@@ -94,12 +102,15 @@ fn cmd_type(command: &ShellCommand) {
         }
     }
 
-    println!("{}: not found", args);
+    _ = writeln!(out, "{}: not found", args);
 }
 
 fn cmd_pwd(command: &ShellCommand) {
     let Ok(path) = get_working_directory() else {
         return;
     };
-    println!("{}", path.display());
+    let Ok(mut out) = command.io_out().try_stdout_write() else {
+        return;
+    };
+    _ = writeln!(out, "{}", path.display());
 }

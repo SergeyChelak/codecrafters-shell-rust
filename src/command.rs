@@ -1,4 +1,4 @@
-use crate::parser::parse_input;
+use crate::{os::StandardIO, parser::parse_input};
 
 pub struct ShellCommand {
     name: String,
@@ -23,11 +23,6 @@ enum Redirect {
     None,
     Out(StandardIO),
     Err(StandardIO),
-}
-
-pub enum StandardIO {
-    Default,
-    File { path: String, append: bool },
 }
 
 impl From<String> for Token {
