@@ -90,21 +90,13 @@ impl ShellCommand {
     }
 
     fn parse_redirect(operator: &str, value: &str) -> Redirect {
-        match operator {
-            ">" | "1>" => {
-                // override stdout
-                Redirect::Out(StandardIO::File {
-                    path: value.to_string(),
-                    append: false,
-                })
-            }
-            "2>" => {
-                // override stderr
-                Redirect::Err(StandardIO::File {
-                    path: value.to_string(),
-                    append: false,
-                })
-            }
+        let path = value.to_string();
+        let append = operator.ends_with(">>");
+        let prefix = &operator[..2.min(operator.len())];
+        let file_io = StandardIO::File { path, append };
+        match prefix {
+            ">" | "1>" | ">>" => Redirect::Out(file_io),
+            "2>" => Redirect::Err(file_io),
             _ => {
                 // not supported
                 Redirect::None
