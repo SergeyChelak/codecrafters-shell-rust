@@ -41,7 +41,7 @@ fn process_input(input: &str) {
 }
 
 fn invalid_input(input: &str) {
-    println!("{}: command not found", input);
+    println!("{}: command not found", input.trim());
 }
 
 fn exec(cmd: &ShellCommand) -> bool {
