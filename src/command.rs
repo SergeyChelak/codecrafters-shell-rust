@@ -100,7 +100,7 @@ impl ShellCommand {
             }
             "2>" => {
                 // override stderr
-                Redirect::Out(StandardIO::File {
+                Redirect::Err(StandardIO::File {
                     path: value.to_string(),
                     append: false,
                 })
