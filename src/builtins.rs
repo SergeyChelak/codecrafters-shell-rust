@@ -39,7 +39,7 @@ pub fn exec_builtin(builtin: Builtin, command: &ShellCommand) {
     let Ok(mut out) = command.io_out().try_stdout_write() else {
         return;
     };
-    let Ok(mut _err) = command.io_err().try_stderr_write() else {
+    let Ok(mut err) = command.io_err().try_stderr_write() else {
         return;
     };
 
@@ -52,6 +52,9 @@ pub fn exec_builtin(builtin: Builtin, command: &ShellCommand) {
         Builtin::Type => cmd_type(args, &mut out),
         Builtin::Pwd => cmd_pwd(&mut out),
     }
+
+    _ = out.flush();
+    _ = err.flush();
 }
 
 fn cmd_cd(args: &[String]) {
