@@ -59,11 +59,11 @@ fn cmd_cd(args: &[String]) {
         return;
     };
 
-    let path = if arg.starts_with("~") {
+    let path = if let Some(rest) = arg.strip_prefix("~") {
         let Ok(home) = env::var("HOME") else {
             return;
         };
-        format!("{}{}", home, &arg[1..])
+        format!("{}{}", home, rest)
     } else {
         arg.to_string()
     };

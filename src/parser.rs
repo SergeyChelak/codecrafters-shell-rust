@@ -48,7 +48,7 @@ impl<'a> Parser<'a> {
     }
 
     pub fn parse(&mut self) {
-        let next = self.input.chars().chain(['\0', '\0'].into_iter()).skip(1);
+        let next = self.input.chars().chain(['\0', '\0']).skip(1);
         for (ch, next) in self.input.chars().chain(iter::once('\0')).zip(next) {
             if self.try_process_escaping(ch) {
                 continue;

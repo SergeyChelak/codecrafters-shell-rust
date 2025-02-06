@@ -17,7 +17,7 @@ pub fn get_working_directory() -> std::io::Result<PathBuf> {
 
 pub fn change_working_directory(path: &str) -> std::io::Result<()> {
     let root = Path::new(path);
-    env::set_current_dir(&root)
+    env::set_current_dir(root)
 }
 
 pub fn find_file<T: AsRef<str>>(name: &str, path_list: &[T]) -> Vec<PathBuf> {
@@ -38,14 +38,14 @@ impl StandardIO {
     pub fn try_stdout(&self) -> io::Result<Stdio> {
         match self {
             StandardIO::Default => Ok(io::stdout().into()),
-            StandardIO::File { path, append } => make_stdio(&path, *append),
+            StandardIO::File { path, append } => make_stdio(path, *append),
         }
     }
 
     pub fn try_stderr(&self) -> io::Result<Stdio> {
         match self {
             StandardIO::Default => Ok(io::stderr().into()),
-            StandardIO::File { path, append } => make_stdio(&path, *append),
+            StandardIO::File { path, append } => make_stdio(path, *append),
         }
     }
 
