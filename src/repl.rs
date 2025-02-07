@@ -1,9 +1,10 @@
-use rustyline::completion::{Completer, FilenameCompleter, Pair};
+use rustyline::completion::{Completer, Pair};
 use rustyline::{
     Completer, CompletionType, Config, Editor, Helper, Highlighter, Hinter, Validator,
 };
 
 use crate::builtins::Builtin;
+use crate::os::{get_search_path, get_working_directory};
 
 #[derive(Helper, Completer, Hinter, Validator, Highlighter)]
 struct EditorHelper<C: Completer> {
@@ -17,8 +18,15 @@ pub fn repl(handler: impl Fn(&str)) {
         // .edit_mode(EditMode::Emacs)
         .build();
     let mut autocomplete = ShellCompleter::new();
-    autocomplete.add(BuiltinCompleter::new());
-    autocomplete.add(FilenameCompleter::new());
+    autocomplete.add(BuiltinCompleter);
+    if let Ok(path) = get_working_directory().map(|path| path.display().to_string()) {
+        autocomplete.add(FilesystemCompleter { path });
+    }
+    if let Ok(path_list) = get_search_path() {
+        path_list.into_iter().for_each(|path| {
+            autocomplete.add(FilesystemCompleter { path });
+        })
+    }
     let helper = EditorHelper {
         completer: autocomplete,
     };
@@ -83,15 +91,7 @@ impl Completer for ShellCompleter {
     }
 }
 
-struct BuiltinCompleter {
-    //
-}
-
-impl BuiltinCompleter {
-    fn new() -> Self {
-        Self {}
-    }
-}
+struct BuiltinCompleter;
 
 impl Completer for BuiltinCompleter {
     type Candidate = Pair;
@@ -113,5 +113,41 @@ impl Completer for BuiltinCompleter {
             .collect::<Vec<_>>();
 
         Ok((pos, candidates))
+    }
+}
+
+struct FilesystemCompleter {
+    path: String,
+}
+
+impl Completer for FilesystemCompleter {
+    type Candidate = Pair;
+
+    fn complete(
+        &self,
+        line: &str,
+        pos: usize,
+        _ctx: &rustyline::Context<'_>,
+    ) -> rustyline::Result<(usize, Vec<Self::Candidate>)> {
+        let read_dir = std::fs::read_dir(&self.path)
+            .map_err(|err| rustyline::error::ReadlineError::Io(err))?;
+
+        let mut result = Vec::new();
+        for path in read_dir {
+            let Ok(dir_entry) = path else {
+                continue;
+            };
+            let Ok(val) = dir_entry.file_name().into_string() else {
+                continue;
+            };
+            if val.starts_with(line) {
+                let pair = Pair {
+                    display: val.clone(),
+                    replacement: format!("{}", &val[pos..]),
+                };
+                result.push(pair);
+            }
+        }
+        return Ok((pos, result));
     }
 }
