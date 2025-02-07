@@ -64,11 +64,19 @@ impl Completer for ShellCompleter {
         ctx: &rustyline::Context<'_>,
     ) -> rustyline::Result<(usize, Vec<Self::Candidate>)> {
         for completer in self.completers.iter() {
-            let Ok(res) = completer.complete(line, pos, ctx) else {
+            let Ok((pos, res)) = completer.complete(line, pos, ctx) else {
                 continue;
             };
-            if !res.1.is_empty() {
-                return Ok(res);
+            let arr = res
+                .into_iter()
+                .map(|pair| Pair {
+                    replacement: pair.replacement + " ",
+                    ..pair
+                })
+                .collect::<Vec<_>>();
+
+            if !arr.is_empty() {
+                return Ok((pos, arr));
             }
         }
         Ok((0, Vec::with_capacity(0)))
@@ -100,7 +108,7 @@ impl Completer for BuiltinCompleter {
             .filter(|s| s.starts_with(line))
             .map(|x| Pair {
                 display: x.clone(),
-                replacement: format!("{} ", &x[pos..]),
+                replacement: format!("{}", &x[pos..]),
             })
             .collect::<Vec<_>>();
 
