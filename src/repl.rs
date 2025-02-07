@@ -14,8 +14,7 @@ struct EditorHelper<C: Completer> {
 
 pub fn repl(handler: impl Fn(&str)) {
     let config = Config::builder()
-        .completion_type(CompletionType::Circular)
-        // .edit_mode(EditMode::Emacs)
+        .completion_type(CompletionType::List)
         .build();
     let mut autocomplete = ShellCompleter::new();
     autocomplete.add(BuiltinCompleter);
