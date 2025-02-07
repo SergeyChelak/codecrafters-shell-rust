@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use rustyline::completion::{Completer, Pair};
 use rustyline::{
     Completer, CompletionType, Config, Editor, Helper, Highlighter, Hinter, Validator,
@@ -70,18 +72,23 @@ impl Completer for ShellCompleter {
         pos: usize,
         ctx: &rustyline::Context<'_>,
     ) -> rustyline::Result<(usize, Vec<Self::Candidate>)> {
-        let mut output = Vec::new();
+        let mut output: HashMap<String, String> = HashMap::new();
         for completer in self.completers.iter() {
             let Ok((_, res)) = completer.complete(line, pos, ctx) else {
                 continue;
             };
-            res.into_iter()
-                .map(|pair| Pair {
-                    replacement: pair.replacement + " ",
-                    ..pair
-                })
-                .for_each(|elem| output.push(elem));
+            res.into_iter().for_each(|elem| {
+                output.insert(elem.display, elem.replacement + " ");
+            })
         }
+        let mut output = output
+            .into_iter()
+            .map(|(k, v)| Pair {
+                display: k,
+                replacement: v,
+            })
+            .collect::<Vec<_>>();
+        output.sort_by(|a, b| a.display.cmp(&b.display));
         Ok((pos, output))
     }
 }
