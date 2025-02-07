@@ -2,25 +2,14 @@ mod builtins;
 mod command;
 mod os;
 mod parser;
-
-use std::io::{self, Write};
+mod repl;
 
 use builtins::{exec_builtin, Builtin};
 use command::ShellCommand;
 use os::{find_file, get_search_path};
-use rustyline::DefaultEditor;
 
 fn main() {
-    let Ok(mut editor) = DefaultEditor::new() else {
-        // process error
-        return;
-    };
-    loop {
-        let Ok(input) = editor.readline("$ ") else {
-            break;
-        };
-        process_input(&input);
-    }
+    repl::repl(process_input);
 }
 
 fn process_input(input: &str) {
