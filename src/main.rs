@@ -8,16 +8,17 @@ use std::io::{self, Write};
 use builtins::{exec_builtin, Builtin};
 use command::ShellCommand;
 use os::{find_file, get_search_path};
+use rustyline::DefaultEditor;
 
 fn main() {
-    let stdin = io::stdin();
+    let Ok(mut editor) = DefaultEditor::new() else {
+        // process error
+        return;
+    };
     loop {
-        print!("$ ");
-        io::stdout().flush().unwrap();
-
-        // Wait for user input
-        let mut input = String::new();
-        stdin.read_line(&mut input).unwrap();
+        let Ok(input) = editor.readline("$ ") else {
+            break;
+        };
         process_input(&input);
     }
 }
