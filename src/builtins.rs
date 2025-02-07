@@ -1,4 +1,4 @@
-use std::{env, io::Write};
+use std::{env, fmt::Display, io::Write};
 
 use crate::{
     command::ShellCommand,
@@ -20,6 +20,13 @@ pub enum Builtin {
     Pwd,
 }
 
+impl Builtin {
+    pub fn all() -> Vec<Self> {
+        use Builtin::*;
+        vec![Cd, Echo, Exit, Type, Pwd]
+    }
+}
+
 impl TryFrom<&str> for Builtin {
     type Error = String;
 
@@ -32,6 +39,19 @@ impl TryFrom<&str> for Builtin {
             CMD_PWD => Ok(Builtin::Pwd),
             _ => Err(format!("Unknown builtin {}", value)),
         }
+    }
+}
+
+impl Display for Builtin {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let val = match self {
+            Builtin::Cd => CMD_CD,
+            Builtin::Echo => CMD_ECHO,
+            Builtin::Exit => CMD_EXIT,
+            Builtin::Type => CMD_TYPE,
+            Builtin::Pwd => CMD_PWD,
+        };
+        write!(f, "{}", val)
     }
 }
 
