@@ -1,4 +1,4 @@
-use rustyline::completion::{Completer, Pair};
+use rustyline::completion::{Completer, FilenameCompleter, Pair};
 use rustyline::{
     Completer, CompletionType, Config, Editor, Helper, Highlighter, Hinter, Validator,
 };
@@ -16,8 +16,11 @@ pub fn repl(handler: impl Fn(&str)) {
         .completion_type(CompletionType::Circular)
         // .edit_mode(EditMode::Emacs)
         .build();
+    let mut autocomplete = ShellCompleter::new();
+    autocomplete.add(BuiltinCompleter::new());
+    autocomplete.add(FilenameCompleter::new());
     let helper = EditorHelper {
-        completer: BuiltinCompleter::new(),
+        completer: autocomplete,
     };
 
     let Ok(mut editor) = Editor::with_config(config) else {
@@ -31,6 +34,44 @@ pub fn repl(handler: impl Fn(&str)) {
             break;
         };
         handler(&input);
+    }
+}
+
+struct ShellCompleter {
+    completers: Vec<Box<dyn Completer<Candidate = Pair>>>,
+}
+
+impl ShellCompleter {
+    pub fn new() -> Self {
+        Self {
+            completers: Vec::new(),
+        }
+    }
+
+    pub fn add(&mut self, completer: impl Completer<Candidate = Pair> + 'static) {
+        let wrap: Box<dyn Completer<Candidate = Pair>> = Box::new(completer);
+        self.completers.push(wrap);
+    }
+}
+
+impl Completer for ShellCompleter {
+    type Candidate = Pair;
+
+    fn complete(
+        &self,
+        line: &str,
+        pos: usize,
+        ctx: &rustyline::Context<'_>,
+    ) -> rustyline::Result<(usize, Vec<Self::Candidate>)> {
+        for completer in self.completers.iter() {
+            let Ok(res) = completer.complete(line, pos, ctx) else {
+                continue;
+            };
+            if !res.1.is_empty() {
+                return Ok(res);
+            }
+        }
+        Ok((0, Vec::with_capacity(0)))
     }
 }
 
