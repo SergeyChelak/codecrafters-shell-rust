@@ -108,7 +108,7 @@ impl Completer for BuiltinCompleter {
             .filter(|s| s.starts_with(line))
             .map(|x| Pair {
                 display: x.clone(),
-                replacement: format!("{}", &x[pos..]),
+                replacement: (x[pos..]).to_string(),
             })
             .collect::<Vec<_>>();
 
@@ -129,8 +129,8 @@ impl Completer for FilesystemCompleter {
         pos: usize,
         _ctx: &rustyline::Context<'_>,
     ) -> rustyline::Result<(usize, Vec<Self::Candidate>)> {
-        let read_dir = std::fs::read_dir(&self.path)
-            .map_err(|err| rustyline::error::ReadlineError::Io(err))?;
+        let read_dir =
+            std::fs::read_dir(&self.path).map_err(rustyline::error::ReadlineError::Io)?;
 
         let mut result = Vec::new();
         for path in read_dir {
@@ -143,11 +143,11 @@ impl Completer for FilesystemCompleter {
             if val.starts_with(line) {
                 let pair = Pair {
                     display: val.clone(),
-                    replacement: format!("{}", &val[pos..]),
+                    replacement: (val[pos..]).to_string(),
                 };
                 result.push(pair);
             }
         }
-        return Ok((pos, result));
+        Ok((pos, result))
     }
 }
