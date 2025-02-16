@@ -68,7 +68,7 @@ pub fn exec_builtin(builtin: Builtin, command: &ShellCommand) {
     match builtin {
         Builtin::Cd => cmd_cd(args),
         Builtin::Echo => cmd_echo(args, &mut out),
-        Builtin::Exit => cmd_exit(),
+        Builtin::Exit => cmd_exit(args),
         Builtin::Type => cmd_type(args, &mut out),
         Builtin::Pwd => cmd_pwd(&mut out),
     }
@@ -101,8 +101,13 @@ fn cmd_echo(args: &[String], out: &mut impl Write) {
     _ = writeln!(out, "{}", output);
 }
 
-fn cmd_exit() {
-    std::process::exit(0);
+fn cmd_exit(args: &[String]) {
+    let code = args
+        .first()
+        .map(|s| s.parse::<i32>())
+        .and_then(|x| x.ok())
+        .unwrap_or_default();
+    std::process::exit(code);
 }
 
 fn cmd_type(args: &[String], out: &mut impl Write) {
